@@ -41,6 +41,8 @@ public class EngineerService {
     private final List<String> listTitle = List.of("Backend Engineer","Data Engineer","Data Scientist","Frontend Engineer","QA","Fullstack Engineer","Solution Architect","Principal Engineer","Engineer Manager","BA");
 
 
+
+
     public void syncEngineer(){
         listFirstname = getRandomListFirstName(5000);
         listLastname = getRandomListLastName(5000);
@@ -57,9 +59,18 @@ public class EngineerService {
         Instant start = Instant.now();
 
         log.info("START : ",start);
-        for (int i = 0; i < partitionListEngineer.size(); i++) {
-            batchInsertEngineer(partitionListEngineer.get(i));
+
+        int threadPoolSize = partitionListEngineer.size();
+
+        // Create a thread pool with the desired number of threads
+        for (int i = 0; i < threadPoolSize; i++) {
+            int finalI = i;
+            new Thread(() -> batchInsertEngineer(partitionListEngineer.get(finalI))).start();
         }
+
+//        for (int i = 0; i < partitionListEngineer.size(); i++) {
+//            batchInsertEngineer(partitionListEngineer.get(i));
+//        }
 
 
     }

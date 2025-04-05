@@ -13,7 +13,7 @@ public class EngineerController {
     @Autowired
     private final EngineerService engineerService;
 
-    @GetMapping("/sync-engineer")
+        @GetMapping("/sync-engineer")
     public void syncEngineers(){
         engineerService.syncEngineer();
     }
