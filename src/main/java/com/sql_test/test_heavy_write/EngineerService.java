@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -29,9 +30,6 @@ public class EngineerService {
     @Autowired
     private final Random random;
 
-    @Autowired
-    private final JdbcTemplate jdbcTemplate;
-
     private List<String> listFirstname;
     private List<String> listLastname;
 
@@ -39,7 +37,6 @@ public class EngineerService {
     private final LocalDate endTime = LocalDate.of(2020,12,31);
 
     private final List<String> listTitle = List.of("Backend Engineer","Data Engineer","Data Scientist","Frontend Engineer","QA","Fullstack Engineer","Solution Architect","Principal Engineer","Engineer Manager","BA");
-
 
     public void syncEngineer(){
         listFirstname = getRandomListFirstName(5000);
@@ -54,14 +51,19 @@ public class EngineerService {
 
         List<List<EngineerEntity>> partitionListEngineer = partitionList(engineerEntityList,1000);
 
-        Instant start = Instant.now();
+        long start = System.currentTimeMillis();
 
-        log.info("START : ",start);
         for (int i = 0; i < partitionListEngineer.size(); i++) {
-            batchInsertEngineer(partitionListEngineer.get(i));
+            final int finalI = i;
+//            Thread.ofVirtual().start(()->{
+//                batchInsertEngineer(partitionListEngineer.get(finalI));
+//                log.info("Time task {} completed: {} ms", finalI, start-System.currentTimeMillis());
+//            });
+            new Thread(()->{
+                batchInsertEngineer(partitionListEngineer.get(finalI));
+                log.info("Time task {} completed: {} ms", finalI, start-System.currentTimeMillis());
+            }).start();
         }
-
-
     }
 
     public EngineerEntity createRandomEngineers(int id){
@@ -86,7 +88,9 @@ public class EngineerService {
         return engineerEntity;
     }
 
+    @Async("VirtualThreadExecutor")
     public void batchInsertEngineer(List<EngineerEntity> listEngineer){
+        System.out.println("Running in thread: " + Thread.currentThread());
         engineerRepository.batchInsertEngineer(listEngineer);
 
         // insert sequentially
@@ -94,7 +98,6 @@ public class EngineerService {
 //            engineerRepository.save(engineer);
 //        }
 
-        log.info("END : ",Instant.now());
     }
 
     private List<String> getRandomListFirstName(int size){
