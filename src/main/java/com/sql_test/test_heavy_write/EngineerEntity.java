@@ -10,7 +10,7 @@ import java.time.LocalDate;
 
 @Entity
 @Data
-@Table(name = "engineer")
+@Table(name = "engineer_sync")
 public class EngineerEntity {
     @Id
     private Integer id;
@@ -32,4 +32,7 @@ public class EngineerEntity {
 
     @Column(name = "started_date")
     private LocalDate startedDate;
+
+    @Column(name = "sync_status")
+    private int syncStatus;
 }
