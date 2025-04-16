@@ -143,58 +143,58 @@ public class EngineerService {
         long start = System.currentTimeMillis();
 
         // 70%
-//        long countEngineer = engineerRepository.count();
-//        int batchSize = 1000;
-//
-//        for (int i = 0; i < countEngineer / batchSize; i++) {
-//            executor.execute(()->syncBatchEngineers(start));
+        long countEngineer = engineerRepository.count();
+        int batchSize = 1000;
+
+        for (int i = 0; i < countEngineer / batchSize; i++) {
+            executor.execute(()->syncBatchEngineers(start));
 //            try {
 //                Thread.sleep(50);
 //            }catch (InterruptedException e){
 //                log.error("Interrupted at task {} ",i);
 //            }
-//        }
+        }
 
 
         // 100%
-        for (int i = 0; i < 4; i++) {
-            executor.execute(() -> {
-                while (true) {
-                    boolean processed = syncBatchEngineers(start);
-                    if (!processed) break;
-                    try {
-                        Thread.sleep(50); // optional throttling
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        break;
-                    }
-                }
-            });
-        }
-
-        executor.shutdown();
-        try {
-            executor.awaitTermination(10, TimeUnit.MINUTES);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+//        for (int i = 0; i < 4; i++) {
+//            executor.execute(() -> {
+//                while (true) {
+//                    boolean processed = syncBatchEngineers(start);
+//                    if (!processed) break;
+//                    try {
+//                        Thread.sleep(50); // optional throttling
+//                    } catch (InterruptedException e) {
+//                        Thread.currentThread().interrupt();
+//                        break;
+//                    }
+//                }
+//            });
+//        }
+//
+//        executor.shutdown();
+//        try {
+//            executor.awaitTermination(10, TimeUnit.MINUTES);
+//        } catch (InterruptedException e) {
+//            Thread.currentThread().interrupt();
+//        }
     }
 
-    @Transactional(rollbackOn = Exception.class)
-    public boolean syncBatchEngineers(long start){
-        List<EngineerEntity> batch = engineerRepository.fetchBatchForProcessing();
-        if (batch.isEmpty()) return false;
-        engineerRepository.batchSyncEngineer(batch);
-        log.info("Synced {} engineers in {} ms", batch.size(), System.currentTimeMillis() - start);
-        return true;
-    }
+//    @Transactional(rollbackOn = Exception.class)
+//    public boolean syncBatchEngineers(long start){
+//        List<EngineerEntity> batch = engineerRepository.fetchBatchForProcessing();
+//        if (batch.isEmpty()) return false;
+//        engineerRepository.batchSyncEngineer(batch);
+//        log.info("Synced {} engineers in {} ms", batch.size(), System.currentTimeMillis() - start);
+//        return true;
+//    }
 
     // 70%
-//    @Transactional(rollbackOn = Exception.class)
-//    public void syncBatchEngineers(long start){
-//        List<EngineerEntity> batch = engineerRepository.fetchBatchForProcessing();
-//        if (batch.isEmpty())return;
-//        engineerRepository.batchSyncEngineer(batch);
-//        log.info("Time task completed : {} ms",System.currentTimeMillis()-start);
-//    }
+    @Transactional(rollbackOn = Exception.class)
+    public void syncBatchEngineers(long start){
+        List<EngineerEntity> batch = engineerRepository.fetchBatchForProcessing();
+        if (batch.isEmpty())return;
+        engineerRepository.batchSyncEngineer(batch);
+        log.info("Time task completed : {} ms",System.currentTimeMillis()-start);
+    }
 }
