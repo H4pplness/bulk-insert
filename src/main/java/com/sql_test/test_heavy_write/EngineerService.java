@@ -137,23 +137,86 @@ public class EngineerService {
         return listLastName;
     }
 
+    @Transactional(rollbackOn = Exception.class)
+    public void syncBatchEngineers(long start){
+
+        List<EngineerEntity> batch = engineerRepository.fetchBatchForProcessing();
+
+//        log.info("Batch {} {} ",start, batch.size());
+        if(batch.isEmpty()){
+            log.info("No more engineers to sync {} ", start);
+            return;
+        }
+        log.info("cursor {} {} ", batch.getFirst().getId(), batch.size());
+        engineerRepository.batchSyncEngineer(batch);
+//        log.info("Time task completed : {} ms",System.currentTimeMillis()-start);
+    }
+
+
 
     public void syncEngineer() {
         ExecutorService executor = Executors.newFixedThreadPool(4);
         long start = System.currentTimeMillis();
 
-        // 70%
-        long countEngineer = engineerRepository.count();
-        int batchSize = 1000;
+        int minId = 1;
+        int maxId = 1000000;
+        int totalRange = maxId - minId + 1;
 
-        for (int i = 0; i < countEngineer / batchSize; i++) {
-            executor.execute(()->syncBatchEngineers(start));
-//            try {
-//                Thread.sleep(50);
-//            }catch (InterruptedException e){
-//                log.error("Interrupted at task {} ",i);
-//            }
+        int rangePerThread = totalRange / 4;
+
+        for (int t = 0; t < 4; t++) {
+            final int threadId = t;
+            final int startId = minId + (threadId * rangePerThread);
+            final int endId = (threadId == 3) ? maxId + 1 : minId + ((threadId + 1) * rangePerThread);
+
+            executor.execute(() -> {
+                log.info("Thread {} processing range {} to {}", threadId, startId, endId - 1);
+                syncEngineersInRange(startId, endId, start);
+            });
         }
+
+        executor.shutdown();
+        try {
+            if (!executor.awaitTermination(24, TimeUnit.HOURS)) {
+                executor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            executor.shutdownNow();
+        }
+    }
+
+    @Transactional(rollbackOn = Exception.class)
+    public void syncEngineersInRange(int startId, int endId, long startTime) {
+        for (int i = startId; i < endId; i += 1000) {
+            List<EngineerEntity> batch = engineerRepository.fetchBatchForProcessingInRange(startId, endId);
+            if (batch.isEmpty()) {
+                log.info("No more engineers in range {} to {}", startId, endId);
+            } else {
+                log.info("Processing {} records, first ID: {}", batch.size(), batch.getFirst().getId());
+                engineerRepository.batchSyncEngineer(batch);
+            }
+        }
+    }
+
+
+
+//    public void syncEngineer() {
+//        ExecutorService executor = Executors.newFixedThreadPool(4);
+//        long start = System.currentTimeMillis();
+//
+//        // 70%
+//        long countEngineer = engineerRepository.count();
+//        int batchSize = 1000;
+//
+//        for (int i = 0; i < countEngineer / batchSize; i++) {
+//            executor.execute(()->syncBatchEngineers(start));
+////            try {
+////                Thread.sleep(50);
+////            }catch (InterruptedException e){
+////                log.error("Interrupted at task {} ",i);
+////            }
+//        }
+//
 
 
         // 100%
@@ -189,12 +252,4 @@ public class EngineerService {
 //        return true;
 //    }
 
-    // 70%
-    @Transactional(rollbackOn = Exception.class)
-    public void syncBatchEngineers(long start){
-        List<EngineerEntity> batch = engineerRepository.fetchBatchForProcessing();
-        if (batch.isEmpty())return;
-        engineerRepository.batchSyncEngineer(batch);
-        log.info("Time task completed : {} ms",System.currentTimeMillis()-start);
-    }
-}
+

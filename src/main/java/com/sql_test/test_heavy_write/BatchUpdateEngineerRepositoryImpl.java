@@ -56,11 +56,15 @@ public class BatchUpdateEngineerRepositoryImpl implements BatchUpdateEngineerRep
         ON CONFLICT (id) DO UPDATE SET
             first_name = EXCLUDED.first_name,
             last_name = EXCLUDED.last_name,
-            gender = EXCLUDED.gender,
+            gender = EXCLUDED.id,
             country_id = EXCLUDED.country_id,
             title = EXCLUDED.title,
             started_date = EXCLUDED.started_date
         """;
+
+        if (engineerEntities.size() < 1000) {
+            log.info("Size of engineerEntities: {}", engineerEntities.size());
+        }
 
         jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
             @Override
@@ -69,7 +73,7 @@ public class BatchUpdateEngineerRepositoryImpl implements BatchUpdateEngineerRep
                 ps.setInt(1,engineer.getId());
                 ps.setString(2,engineer.getFirstname());
                 ps.setString(3,engineer.getLastname());
-                ps.setInt(4,engineer.getGender());
+                ps.setInt(4,engineer.getId());
                 ps.setInt(5,engineer.getCountryId());
                 ps.setString(6,engineer.getTitle());
                 ps.setObject(7, engineer.getStartedDate());
@@ -99,6 +103,6 @@ public class BatchUpdateEngineerRepositoryImpl implements BatchUpdateEngineerRep
             }
         });
 
-        log.info("--> UPDATED SUCCESSFULLY !");
+//        log.info("--> UPDATED SUCCESSFULLY !");
     }
 }
