@@ -35,6 +35,7 @@ public class BatchUpdateEngineerRepositoryImpl implements BatchUpdateEngineerRep
                 ps.setInt(5,engineer.getCountryId());
                 ps.setString(6,engineer.getTitle());
                 ps.setObject(7, engineer.getStartedDate());
+                ps.setInt(8,0);
             }
 
             @Override
