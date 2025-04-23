@@ -19,8 +19,14 @@ public class EngineerController {
         engineerService.insertEngineer(numberOfEngineer);
     }
 
+    /**
+     * 1 : đơn luồng, 2 : đa luồng skip locked, 3 : đa luồng lấy id theo số dư khi chia 1000, 4 : đa luồng khi phân mảnh dữ liệu theo id từ bé đến lớn, mỗi batch lấy 1000 rows, 5: tận dụng cursor
+     * @param strategy
+     * @throws InterruptedException
+     */
+
     @GetMapping("/sync-engineers")
-    public void syncEngineers() throws InterruptedException {
-        engineerService.syncEngineer();
+    public void syncEngineers(@RequestParam("strategy")Integer strategy) throws InterruptedException {
+        engineerService.syncEngineer(strategy);
     }
 }

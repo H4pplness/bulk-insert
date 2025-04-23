@@ -4,8 +4,8 @@ import com.github.javafaker.Faker;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.coyote.BadRequestException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -39,7 +39,7 @@ public class EngineerService {
 
     private final List<String> listTitle = List.of("Backend Engineer","Data Engineer","Data Scientist","Frontend Engineer","QA","Fullstack Engineer","Solution Architect","Principal Engineer","Engineer Manager","BA");
 
-    public void insertEngineer(int numberOfEngineer) throws InterruptedException {
+    public void insertEngineer(int numberOfEngineer) {
         listFirstname = getRandomListFirstName(5000);
         listLastname = getRandomListLastName(5000);
 
@@ -55,9 +55,7 @@ public class EngineerService {
         // Khi mà insert data vào db , phải đợi phản hồi từ db
 
         // Non-blocking và blocking
-
         // Non-blocking : Khi mà gặp những tác vụ I/O -> nếu mà chạy 1 thread thì nó sẽ block
-
 
         List<List<EngineerEntity>> partitionListEngineer = partitionList(engineerEntityList,1000);
 
@@ -65,13 +63,6 @@ public class EngineerService {
 
         for (int i = 0; i < partitionListEngineer.size(); i++) {
             final int finalI = i;
-//            Thread.ofVirtual().start(()->{
-//                batchInsertEngineer(partitionListEngineer.get(finalI));
-//                log.info("Time task {} completed: {} ms", finalI, start-System.currentTimeMillis());
-//            });
-//            tuần tự
-//            batchInsertEngineer(partitionListEngineer.get(finalI));
-//            log.info("Time task {} completed: {} ms", finalI, start-System.currentTimeMillis());
             // chạy đa luồng
             new Thread(()->{
                 batchInsertEngineer(partitionListEngineer.get(finalI));
@@ -103,16 +94,9 @@ public class EngineerService {
         return engineerEntity;
     }
 
-    @Async("VirtualThreadExecutor")
     public void batchInsertEngineer(List<EngineerEntity> listEngineer){
         System.out.println("Running in thread: " + Thread.currentThread());
         engineerRepository.batchInsertEngineer(listEngineer);
-
-        // insert sequentially
-//        for (EngineerEntity engineer : listEngineer){
-//            engineerRepository.save(engineer);
-//        }
-
     }
 
     private List<String> getRandomListFirstName(int size){
@@ -134,135 +118,160 @@ public class EngineerService {
     }
 
 
-    public void syncEngineer() {
-        ExecutorService executor = Executors.newFixedThreadPool(4);
-        long start = System.currentTimeMillis();
+    public void syncEngineer(Integer strategy) {
+        switch (strategy){
+            case 1:
+                syncSingleThread();
+                break;
 
-        // 70%
-        long countEngineer = 1000000;
-        int batchSize = 1000;
+            case 2:
+                syncSimpleMultiThread();
+                break;
 
-        for (int i = 4000; i < 5000; i++) {
-            int finalI = i;
-            executor.execute(()->syncBatchEngineerByCursor(start,finalI*batchSize));
-//            executor.execute(()->syncBatchEngineers(start));
-//            try {
-//                Thread.sleep(50);
-//            }catch (InterruptedException e){
-//                log.error("Interrupted at task {} ",i);
-//            }
+            case 3:
+                syncMultiThreadByRedundant();
+                break;
+
+            case 4:
+                syncMultiThreadByRange();
+                break;
+
+            case 5:
+                syncMultiThreadByCursor();
+                break;
+
+            default: log.error("Not found !");
         }
 
-        /**
-         *
-         * Update 1 trieu thong tin engineer tu 1 ben khac sang
-         *
-         *
-         * Luong chay la gi
-         *
-         * Thực hiện 1000 lần
-         *
-         * B1 : Lấy ra 1000 engineer_sync để update và khóa lại
-         * B2 : Thực hiện đồng bộ bản ghi vào engineer
-         * B3 : Chuyển trạng thái sync_status = 1 cho những engineer_sync được đồng bộ
-         *
-         *
-         * 2 query for update nếu có bản ghi mà trùng nhau thì có thể xảy ra trường hợp bị khóa 2 lần
-         *
-         *
-         * Thực hiện cập nhật 1000 lần và 1000 lần này tập dữ liệu update của từng lần là khác nhau
-         *
-         *
-         */
-
-        /**
-         *
-         * int balance = 500
-         * int bag = 300
-         *
-         * thread
-         *
-         *
-         * if(balance > bag){
-         *
-         *
-         *     balance -= bag
-         * }
-         *
-         * if (!lock){
-         *
-         *     lock = true
-         * }
-         *
-         */
-
-        /**
-         * thread 2
-         *
-         * if(balance > bag){
-         *
-         *
-         *   balance -= bag
-         * }
-         *
-         *
-         */
-
-
-        // 100%
-//        for (int i = 0; i < 4; i++) {
-//            executor.execute(() -> {
-//                while (true) {
-//                    boolean processed = syncBatchEngineers(start);
-//                    if (!processed) break;
-//                    try {
-//                        Thread.sleep(50); // optional throttling
-//                    } catch (InterruptedException e) {
-//                        Thread.currentThread().interrupt();
-//                        break;
-//                    }
-//                }
-//            });
+//        ExecutorService executor = Executors.newFixedThreadPool(4);
+//        long start = System.currentTimeMillis();
+//
+//        // 70%
+//        long countEngineer = 1000000;
+//        int batchSize = 1000;
+//
+//        for (int i = 4000; i < 5000; i++) {
+//            int finalI = i;
+//            executor.execute(()-> syncCursorBatch(start,finalI*batchSize));
+////            executor.execute(()->syncBatchEngineers(start));
+////            try {
+////                Thread.sleep(50);
+////            }catch (InterruptedException e){
+////                log.error("Interrupted at task {} ",i);
+////            }
 //        }
+//
+//
+//        // 100%
+////        for (int i = 0; i < 4; i++) {
+////            executor.execute(() -> {
+////                while (true) {
+////                    boolean processed = syncBatchEngineers(start);
+////                    if (!processed) break;
+////                    try {
+////                        Thread.sleep(50); // optional throttling
+////                    } catch (InterruptedException e) {
+////                        Thread.currentThread().interrupt();
+////                        break;
+////                    }
+////                }
+////            });
+////        }
+//
+//        executor.shutdown();
+    }
+
+    public void syncSingleThread(){
+        long start = System.currentTimeMillis();
+        for (int i=0;i<1000;i++){
+            syncRandomBatch(start);
+        }
+    }
+
+    public void syncSimpleMultiThread(){
+        ExecutorService executor = Executors.newFixedThreadPool(4);
+        long start = System.currentTimeMillis();
+        for (int i=0;i<1000;i++){
+            executor.execute(()->syncRandomBatch(start));
+        }
+
 
         executor.shutdown();
         try {
-            executor.awaitTermination(10, TimeUnit.MINUTES);
+            if (!executor.awaitTermination(5, TimeUnit.MINUTES)) {
+                executor.shutdownNow();
+                throw new RuntimeException("Timed out waiting for batch sync tasks");
+            }
         } catch (InterruptedException e) {
+            executor.shutdownNow();
             Thread.currentThread().interrupt();
         }
     }
 
-//    @Transactional(rollbackOn = Exception.class)
-//    public boolean syncBatchEngineers(long start){
-//        List<EngineerEntity> batch = engineerRepository.fetchBatchForProcessing();
-//        if (batch.isEmpty()) return false;
-//        engineerRepository.batchSyncEngineer(batch);
-//        log.info("Synced {} engineers in {} ms", batch.size(), System.currentTimeMillis() - start);
-//        return true;
-//    }
+    public void syncMultiThreadByRedundant(){
+        ExecutorService executor = Executors.newFixedThreadPool(4);
+        long start = System.currentTimeMillis();
+        for (int i=0;i<1000;i++){
+            int finalI = i;
+            executor.execute(()->syncRedundantBatch(start,finalI));
+        }
 
-    @Transactional(rollbackOn = Exception.class)
-    public boolean syncRandomBatchEngineers(long start){
-        List<EngineerEntity> batch = engineerRepository.fetchBatchForProcessing1();
-        if (batch.isEmpty()) return false;
-        engineerRepository.batchSyncEngineer(batch);
-        log.info("Synced {} engineers in {} ms", batch.size(), System.currentTimeMillis() - start);
-        return true;
+        executor.shutdown();
+        try {
+            if (!executor.awaitTermination(5, TimeUnit.MINUTES)) {
+                executor.shutdownNow();
+                throw new RuntimeException("Timed out waiting for batch sync tasks");
+            }
+        } catch (InterruptedException e) {
+            executor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
     }
 
-    // 70%
+    public void syncMultiThreadByRange(){
+        ExecutorService executor = Executors.newFixedThreadPool(4);
+        long start = System.currentTimeMillis();
+        for (int i=0;i<5000;i++){
+            int finalI = i;
+            executor.execute(()->syncRangeBatch(start,finalI*1000+1,finalI*1000+1000));;
+        }
+
+        executor.shutdown();
+        try {
+            if (!executor.awaitTermination(5, TimeUnit.MINUTES)) {
+                executor.shutdownNow();
+                throw new RuntimeException("Timed out waiting for batch sync tasks");
+            }
+        } catch (InterruptedException e) {
+            executor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    public void syncMultiThreadByCursor(){
+
+    }
+
+
     @Transactional(rollbackOn = Exception.class)
-    public void syncBatchEngineersByRedundant(long start,int task){
-        List<EngineerEntity> batch = engineerRepository.fetchBatchForProcessing(task);
+    public void syncRandomBatch(long start){
+        List<EngineerEntity> batch = engineerRepository.fetchSimpleBatch();
+        if (batch.isEmpty()) return;
+        engineerRepository.batchSyncEngineer(batch);
+        log.info("Time task completed : {} ms",System.currentTimeMillis()-start);
+    }
+
+
+    @Transactional(rollbackOn = Exception.class)
+    public void syncRedundantBatch(long start,int task){
+        List<EngineerEntity> batch = engineerRepository.fetchRedundantBatch(task);
         if (batch.isEmpty())return;
         engineerRepository.batchSyncEngineer(batch);
         log.info("Time task completed : {} ms",System.currentTimeMillis()-start);
     }
 
-    //100% 17s Peak vcl
     @Transactional(rollbackOn = Exception.class)
-    public void syncBatchEngineerByCursor(long start,Integer cursor){
+    public void syncCursorBatch(long start, Integer cursor){
         List<EngineerEntity> batch = engineerRepository.cursorFetchBatch(cursor,1000);
         if (batch.isEmpty())return;
         engineerRepository.batchSyncEngineer(batch);
@@ -270,8 +279,8 @@ public class EngineerService {
     }
 
     @Transactional(rollbackOn = Exception.class)
-    public void syncRangeBatchEngineer(long start,Integer firstIdx,Integer lastIdx){
-        List<EngineerEntity> batch = engineerRepository.fetchBatchInARange(firstIdx,lastIdx,lastIdx-firstIdx);
+    public void syncRangeBatch(long start, Integer firstIdx, Integer lastIdx){
+        List<EngineerEntity> batch = engineerRepository.fetchBatchInARange(firstIdx,lastIdx,lastIdx-firstIdx+1);
         if (batch.isEmpty())return;
         engineerRepository.batchSyncEngineer(batch);
         log.info("Time task completed : {} ms",System.currentTimeMillis()-start);

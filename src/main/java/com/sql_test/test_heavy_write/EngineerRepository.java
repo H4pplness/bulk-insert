@@ -16,7 +16,7 @@ public interface EngineerRepository extends JpaRepository<EngineerEntity,Integer
         LIMIT 1000
         FOR UPDATE SKIP LOCKED
     """, nativeQuery = true)
-    List<EngineerEntity> fetchBatchForProcessing(@Param("redundant")int redundant);
+    List<EngineerEntity> fetchRedundantBatch(@Param("redundant")int redundant);
 
     @Query(value = """
         SELECT * FROM engineer_sync
@@ -24,7 +24,7 @@ public interface EngineerRepository extends JpaRepository<EngineerEntity,Integer
         LIMIT 1000
         FOR UPDATE SKIP LOCKED
     """, nativeQuery = true)
-    List<EngineerEntity> fetchBatchForProcessing1();
+    List<EngineerEntity> fetchSimpleBatch();
 
     @Query(value = "SELECT * FROM engineer_sync " +
             "WHERE sync_status = 0 " +
