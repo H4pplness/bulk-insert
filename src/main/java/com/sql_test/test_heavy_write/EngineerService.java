@@ -51,14 +51,6 @@ public class EngineerService {
             engineerEntityList.add(engineerEntity);
         }
 
-        // tạo 1tr bản ghi để insert vào db
-        // thông thường thì khi mà insert vào db, thì phải đợi response từ db phản hồi rồi mới chạy tiếp
-        // Khi mà insert data vào db , phải đợi phản hồi từ db
-
-        // Non-blocking và blocking
-
-        // Non-blocking : Khi mà gặp những tác vụ I/O -> nếu mà chạy 1 thread thì nó sẽ block
-
 
         List<List<EngineerEntity>> partitionListEngineer = partitionList(engineerEntityList,1000);
 
@@ -111,12 +103,6 @@ public class EngineerService {
     public void batchInsertEngineer(List<EngineerEntity> listEngineer){
         System.out.println("Running in thread: " + Thread.currentThread());
         engineerRepository.batchInsertEngineer(listEngineer);
-
-        // insert sequentially
-//        for (EngineerEntity engineer : listEngineer){
-//            engineerRepository.save(engineer);
-//        }
-
     }
 
     private List<String> getRandomListFirstName(int size){
@@ -196,6 +182,27 @@ public class EngineerService {
                 engineerRepository.batchSyncEngineer(batch);
             }
         }
+    }
+
+    @Transactional
+    public void updateStartedDate(){
+        LocalDate startedDate = getRandomDate(startTime,endTime);
+        List<LocalDate> startedDates = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            startedDates.add(getRandomDate(startTime,endTime));
+        }
+        List<Integer> engineerIds = new ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            engineerIds.add(random.nextInt(1000000));
+        }
+        List<Integer> genderIds = new ArrayList<>();
+        for (        int i = 0; i < 10; i++) {
+            genderIds.add(random.nextInt(4)+1);
+        }
+        log.info("Started date: {}", startedDate);
+        log.info("Started dates: {}", startedDates);
+        engineerRepository.updateStartedDate(startedDate, startedDates);
+        log.info("Updated started date successfully");
     }
 
 

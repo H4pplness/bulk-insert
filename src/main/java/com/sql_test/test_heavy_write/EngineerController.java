@@ -23,4 +23,10 @@ public class EngineerController {
     public void syncEngineers() throws InterruptedException {
         engineerService.syncEngineer();
     }
+
+    @GetMapping("/deadlock")
+    public void deadlock() {
+        engineerService.updateStartedDate();
+    }
+
 }
