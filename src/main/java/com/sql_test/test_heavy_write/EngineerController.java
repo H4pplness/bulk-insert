@@ -2,10 +2,7 @@ package com.sql_test.test_heavy_write;
 
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/engineer")
@@ -13,9 +10,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class EngineerController {
     @Autowired
     private final EngineerService engineerService;
+    @Autowired
+    private TestIsolationService testIsolationService;
+    @Autowired
+    private TestTransactionalService testTransactionalService;
 
     @GetMapping("/insert-engineers")
-    public void insertEngineers(@RequestParam("n")Integer numberOfEngineer) throws InterruptedException {
+    public void insertEngineers(@RequestParam("n")Integer numberOfEngineer) {
         engineerService.insertEngineer(numberOfEngineer);
     }
 
@@ -26,7 +27,23 @@ public class EngineerController {
      */
 
     @GetMapping("/sync-engineers")
-    public void syncEngineers(@RequestParam("strategy")Integer strategy) throws InterruptedException {
+    public void syncEngineers(@RequestParam("strategy")Integer strategy) {
         engineerService.syncEngineer(strategy);
+    }
+
+
+    @GetMapping("/isolation/sync")
+    public void sync() {
+        testIsolationService.syncData();
+    }
+
+    @PutMapping("/{id}")
+    public void update(@PathVariable Integer id,@RequestParam("sleep") Integer sleep) throws InterruptedException {
+        testTransactionalService.update(id,sleep);
+    }
+
+    @GetMapping("/sync-hashing")
+    public void syncEngineersByConsistentHashing() {
+        engineerService.syncEngineerByConsistentHashing();
     }
 }

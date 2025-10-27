@@ -7,11 +7,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -117,6 +116,41 @@ public class EngineerService {
         return listLastName;
     }
 
+    public void syncEngineerByConsistentHashing() {
+        ExecutorService executor = Executors.newFixedThreadPool(4);
+        List<Integer> ids = new ArrayList<>();
+        for (int i = 0; i < 1000; i++) {
+            ids.add(i);
+        }
+
+        List<String> workers = List.of("Worker-1", "Worker-2", "Worker-3", "Worker-4");
+        ConsistentHashing<String> consistentHashing =
+                new ConsistentHashing<>(new ConsistentHashing.SHA256Hash(), 50, workers);
+
+        // Map each worker -> list of IDs
+        Map<String, List<Integer>> workerBatches = new HashMap<>();
+        for (String w : workers) {
+            workerBatches.put(w, new ArrayList<>());
+        }
+
+        for (Integer id : ids) {
+            String worker = consistentHashing.get(id);
+            workerBatches.get(worker).add(id);
+        }
+        long start = System.currentTimeMillis();
+
+        // Submit to threads
+        for (String worker : workers) {
+            List<Integer> batch = workerBatches.get(worker);
+            executor.submit(() -> {
+                for (Integer id : batch) {
+                    syncRangeBatch(start, id*1000+1, id*1000 + 1000);
+                }
+            });
+        }
+
+        executor.shutdown();
+    }
 
     public void syncEngineer(Integer strategy) {
         switch (strategy){
@@ -231,7 +265,7 @@ public class EngineerService {
     public void syncMultiThreadByRange(){
         ExecutorService executor = Executors.newFixedThreadPool(4);
         long start = System.currentTimeMillis();
-        for (int i=0;i<5000;i++){
+        for (int i=0;i<1000;i++){
             int finalI = i;
             executor.execute(()->syncRangeBatch(start,finalI*1000+1,finalI*1000+1000));;
         }
@@ -252,8 +286,7 @@ public class EngineerService {
 
     }
 
-
-    @Transactional(rollbackOn = Exception.class)
+    @org.springframework.transaction.annotation.Transactional(isolation = Isolation.REPEATABLE_READ,rollbackFor = Exception.class)
     public void syncRandomBatch(long start){
         List<EngineerEntity> batch = engineerRepository.fetchSimpleBatch();
         if (batch.isEmpty()) return;
@@ -278,7 +311,7 @@ public class EngineerService {
         log.info("Time task completed : {} ms",System.currentTimeMillis()-start);
     }
 
-    @Transactional(rollbackOn = Exception.class)
+//    @Transactional(rollbackOn = Exception.class)
     public void syncRangeBatch(long start, Integer firstIdx, Integer lastIdx){
         List<EngineerEntity> batch = engineerRepository.fetchBatchInARange(firstIdx,lastIdx,lastIdx-firstIdx+1);
         if (batch.isEmpty())return;

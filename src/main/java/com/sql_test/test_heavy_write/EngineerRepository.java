@@ -1,6 +1,8 @@
 package com.sql_test.test_heavy_write;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -17,6 +19,7 @@ public interface EngineerRepository extends JpaRepository<EngineerEntity,Integer
         FOR UPDATE SKIP LOCKED
     """, nativeQuery = true)
     List<EngineerEntity> fetchRedundantBatch(@Param("redundant")int redundant);
+
 
     @Query(value = """
         SELECT * FROM engineer_sync
@@ -40,8 +43,10 @@ public interface EngineerRepository extends JpaRepository<EngineerEntity,Integer
             SELECT * FROM engineer_sync 
             WHERE sync_status = 0 
             AND id BETWEEN :firstIdx AND :lastIdx 
-            LIMIT :batch 
-            FOR UPDATE SKIP LOCKED
+            LIMIT :batch
             """,nativeQuery = true)
     List<EngineerEntity> fetchBatchInARange(@Param("firstIdx") Integer firstIdx, @Param("lastIdx") Integer lastIdx, @Param("batch") Integer batchSize);
+
+    @Query(value = "SELECT * FROM engineer_sync WHERE id = :id FOR UPDATE",nativeQuery = true)
+    EngineerEntity findAndLock(@Param("id") Integer id);
 }
